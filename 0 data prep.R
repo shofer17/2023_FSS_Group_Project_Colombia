@@ -81,6 +81,9 @@ rm(drugs_amo, drugs_amo_19_22, drugs_amo_20_23, drugs_nw, drugs_nw_20_23, drugs_
 writexl::write_xlsx(data_deaths, path = paste0(path_clean, "death_by_drug.xlsx"))
 writexl::write_xlsx(drugs, path = paste0(path_clean, "seized_by_drug.xlsx"))
 
+haven::write_dta(data_deaths, path = paste0(path_clean, "death_by_drug.dta"))
+haven::write_dta(drugs, path = paste0(path_clean, "seized_by_drug.dta"))
+
 # 4 plot data -----------------------------------------------------------------
 
 p <- ggplot(data_deaths, aes(x = year, y = number, color = drug))+
@@ -94,5 +97,3 @@ p1 <- ggplot(drugs, aes(x = date, y = log(total), color = drug))+
 
 ggsave(paste0(path_charts, "death_by_drug.png"),p)
 ggsave(paste0(path_charts, "seized_by_drug.png"),p1)
-
-
