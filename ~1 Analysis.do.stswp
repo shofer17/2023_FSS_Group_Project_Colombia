@@ -295,26 +295,123 @@ gen period = ym(Year, Month)
 format %tm period
 
 rename value real_income
-
+save "$data/real_income_SA_proc", replace
 
 use "$data_clean\seized_by_drug.dta", clear
 
 destring *, replace
 
-gen Year = year(date_stata)
-gen Month = 
-format %tm date
+gen period = ym(year, month_num)
+format %tm period
+
+encode drug, gen(drug_type)
+keep kg period drug_type
+
+bys period: egen total_kg = sum(kg)
+gen ratio_fent = kg/total_kg if drug_type ==  2
+gen ratio_cocaine = kg/total_kg if drug_type == 1
+gen fent_kg = kg if drug_type ==  2
+gen cocaine_kg = kg if drug_type ==  1
+
+collapse (max) ratio* fent_kg cocaine_kg, by(period)
+
+merge 1:m period using "$data\real_income_SA_proc.dta"
+keep if _merge == 3
+
+* Some graphs
+* Fentanyl ratio
+preserve
+collapse (mean) ratio_fent ratio_cocaine, by(period)
+
+twoway (connected ratio_fent period, mcolor(black) lcolor(black%60) msize(small) msymbol(Dh) lpattern(shortdash) mlc(black) ///
+mfc(none) xtitle("Time", height(6) axis(2)))   ////
+(connected ratio_cocaine period, mcolor(blue) ///
+lcolor(blue%60) msize(small) msymbol(Oh) lpattern(shortdash) mlc(blue) mfc(none)  ///
+xaxis(1 2) xline(746 13, lcolor(black) lpattern(dash) lwidth(medthin)) xlabel(746 "Fentanyl?", labsize(med))) 
+restore
 
 
 
+* compute growths
+bysort DPTO (period): g real_income_gr=(real_income[_n]-real_income[_n-1])/real_income[_n-1] if _n!=1 & real_income!=.
+bysort DPTO (period): g fent_gr=(ratio_fent[_n]-ratio_fent[_n-1])/ratio_fent[_n-1] if _n!=1 & ratio_fent!=.
+bysort DPTO (period): g coca_gr=(ratio_cocaine[_n]-ratio_cocaine[_n-1])/ratio_cocaine[_n-1] if _n!=1 & ratio_cocaine!=.
+* regressions
+
+* graphs
+twoway (connected ratio_fent period, yaxis(2) mcolor(black) lcolor(black%60) msize(small) msymbol(Dh) lpattern(shortdash) mlc(black) ///
+mfc(none) xtitle("Time", height(6) axis(2)))   ////
+(connected ratio_cocaine period, yaxis(2) mcolor(blue) ///
+lcolor(blue%60) msize(small) msymbol(Oh) lpattern(shortdash) mlc(blue) mfc(none)  ///
+xaxis(1 2) xline(746 13, lcolor(black) lpattern(dash) lwidth(medthin)) xlabel(746 "Fentanyl?", labsize(med))) ///
+(connected real_income period if DPTO == 19, ///
+mcolor(red) lcolor(red%60) msize(small) msymbol(Sh) lpattern(shortdash) mlc(red) mfc(none)) ///
+(connected real_income period if DPTO == 5, ///
+mcolor(green) lcolor(green%60) msize(small) msymbol(Dh) lpattern(shortdash) mlc(green) mfc(none)) ///
+(connected real_income period if DPTO == 13, ///
+mcolor(lavender) lcolor(lavender%60) msize(small) msymbol(Dh) lpattern(dash) mlc(lavender) mfc(none)) ///
+(connected real_income period if DPTO == 23, ///
+mcolor(olive_teal) lcolor(olive_teal%90) msize(small) msymbol(Dh) lpattern(shortdash) mlc(olive_teal) mfc(none)) ///
+(connected real_income period if DPTO == 18, ///
+mcolor(orange) lcolor(orange%60) msize(small) msymbol(Sh) lpattern(shortdash) mlc(orange) mfc(none)) ///
+(connected real_income period if DPTO == 23, ///
+mcolor(purple) lcolor(purple%60) msize(small) msymbol(Dh) lpattern(dash) mlc(purple) mfc(none)) ///
+, ///
+legend(order(1 "Fentanyl Ratio" 2 "Cocaine ratio" 3 "Nariño" 4 "Norte de Santander" 5 "Cauca" 6 "Antioquia" 7 "Bolívar" 8 "Córdoba" 9 "Caquetá" 10 "Chocó")size(small) rows(2) pos(6) region(c(none))) graphregion(color(white)) bgcolor(white) ///
+xlabel(,valuelabel labsize(medsmall) angle(horizontal)) ytitle("Average Rural Household Income (COP)", size(small) height(6)) xtitle("") ///
+plotregion(margin(none))
+
+twoway (connect  real_income period, by(DPTO)) /// 
+(connected ratio_cocaine period, yaxis(2) mcolor(blue) ///
+lcolor(blue%60) msize(small) msymbol(Oh) lpattern(shortdash) mlc(blue) mfc(none)  ///
+xaxis(1 2) xline(746 13, lcolor(black) lpattern(dash) lwidth(medthin)) xlabel(746 "Fentanyl?", labsize(med))) ///
+(connected ratio_fent period, yaxis(2) ///
+mcolor(red) lcolor(red%60) msize(small) msymbol(Sh) lpattern(shortdash) mlc(red) mfc(none))
+
+
+
+
+/*
+
+
+*/
+
+*keep if period <= 731 | period >= 756
+xtset DPTO period
+
+*************************** Seized drug data ******************************
+eststo clear
+* 1. No fixed effects
+eststo: reghdfe real_income_gr fent_gr coca_gr, noabs vce(cluster DPTO)
+	estadd local SFE $\times$
+	estadd local TFE $\times$
+
+* 2. State-level fixed effects
+preserve
+drop if DPTO == 5 | DPTO == 23 
+eststo: reghdfe real_income_gr fent_gr coca_gr, abs(DPTO) vce(cluster DPTO)
+	estadd local SFE $\checkmar$
+	estadd local TFE $\times$	
+restore
+* 3. 
+eststo: reghdfe real_income_gr fent_gr coca_gr, nocons abs(period) vce(cluster DPTO)
+	estadd local SFE $\checkmar$
+	estadd local TFE $\times$	
+	
+* 4. 
+eststo: reghdfe real_income_gr fent_gr coca_gr, nocons abs(DPTO period) vce(cluster DPTO)
+	estadd local SFE $\checkmar$
+	estadd local TFE $\checkmar$		
+	
 * Output table
-
-
-
-esttab using "$tabfolder/Table_Regression.tex", replace f  ///
-stats(N r2 WFE TFE DFE las soc, fmt(0 3) labels("Observations" "R-squared" "Worker F.E." "Time F.E." "Division-Time F.E." "Post-LASSO OLS" "Socio-demographic Controls")) b(%9.3f) se(%9.3f) star(* 0.1 ** 0.05 *** 0.01) nocons nomtitle ///
+esttab using "$tabfolder/Table_Regression_seized.tex", replace f  ///
+stats(N r2 SFE TFE, fmt(0 3) labels("Observations" "R-squared" "State F.E." "Time F.E.")) b(%9.3f) se(%9.3f) star(* 0.1 ** 0.05 *** 0.01) nocons nomtitle ///
 label booktab  ///
-prehead("\begin{tabular}{lcccccc} \\ \hline ") /// 
-posthead("& \multicolumn{6}{c}{Log Goal Achievement} \\ \hline  &  &  &  &  &  &  &  \\") ///
+prehead("\begin{tabular}{lcccc} \\ \hline ") /// 
+posthead("& \multicolumn{4}{c}{$\Delta$ Real Income} \\ \hline  &  &  &  &  &  \\") ///
 prefoot("\arrayrulecolor{black!10}\midrule") ///
-postfoot("\arrayrulecolor{black}\bottomrule" "\multicolumn{7}{c}{*** p$<$0.01, ** p$<$0.05, * p$<$0.1}" "\end{tabular}")	
+postfoot("\arrayrulecolor{black}\bottomrule" "\multicolumn{5}{c}{*** p$<$0.01, ** p$<$0.05, * p$<$0.1}" "\end{tabular}")	
+
+
+*************************** Death records data ****************************
+
