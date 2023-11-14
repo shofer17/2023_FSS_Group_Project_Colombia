@@ -14,3 +14,8 @@ path_charts = "charts/"
 # Libraries
 library(tidyverse)
 library(haven)
+library(sqldf)
+# install.packages("BiocManager")
+# BiocManager::install("rhdf5")
+library(rhdf5)
+
