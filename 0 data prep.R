@@ -83,9 +83,11 @@ months <- data.frame("month" = c("JAN","FEB","MAR","APR","MAY","JUN", "JUL", "AU
                      "month_num" = c(paste0("0", 1:9),10:12))
 
 drugs <- drugs %>%
-    rename("year" = "FY", "month" = "Month..abbv.", "drug" = "Drug.Type", "quantity" = "Sum.Qty..lbs.")%>%
-    select(year,month, drug, quantity)%>%
-    filter(drug %in% c("Cocaine", "Fentanyl"))%>%
+    rename("year" = "FY", "month" = "Month..abbv.", "drug" = "Drug.Type", "quantity" = "Sum.Qty..lbs.", "events" = "Count.of.Event")%>%
+    select(year,month, drug, quantity, events)%>%
+    filter(drug %in% c("Cocaine", "Fentanyl"))
+
+drugs_seized <- drugs %>%
     group_by(year, month, drug)%>%
     summarise(kg = sum(quantity))%>%
     ungroup()%>%
@@ -94,17 +96,26 @@ drugs <- drugs %>%
     mutate(date_stata = paste0(year,month_num))%>% #for merge with stata
     select(-c(month))
 
-
+drugs_seized_eventnum <- drugs %>%
+  group_by(year, month, drug)%>%
+  summarise(events = sum(events))%>%
+  ungroup()%>%
+  left_join(months, by = "month")%>%
+  mutate(date = dmy(paste0("1-",month_num,"-", year)))%>% #for plotting
+  mutate(date_stata = paste0(year,month_num))%>% #for merge with stata
+  select(-c(month))
 
 rm(drugs_amo, drugs_amo_19_22, drugs_amo_20_23, drugs_nw, drugs_nw_20_23, drugs_nw_19_22, months)
 
 # 3 save data -----------------------------------------------------------------
 
 writexl::write_xlsx(data_deaths, path = paste0(path_clean, "death_by_drug.xlsx"))
-writexl::write_xlsx(drugs, path = paste0(path_clean, "seized_by_drug.xlsx"))
+writexl::write_xlsx(drugs_seized, path = paste0(path_clean, "seized_by_drug.xlsx"))
+writexl::write_xlsx(drugs_seized_eventnum, path = paste0(path_clean, "seized_by_drug_eventnum.xlsx"))
 
 haven::write_dta(data_deaths, path = paste0(path_clean, "death_by_drug.dta"))
-haven::write_dta(drugs, path = paste0(path_clean, "seized_by_drug.dta"))
+haven::write_dta(drugs_seized, path = paste0(path_clean, "seized_by_drug.dta"))
+haven::write_dta(drugs_seized_eventnum, path = paste0(path_clean, "seized_by_drug_eventnum.dta"))
 
 # 4 plot data -----------------------------------------------------------------
 
