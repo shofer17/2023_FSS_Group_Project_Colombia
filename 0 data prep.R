@@ -1,7 +1,7 @@
 # Date: 06/11/2023
 # Author: Silvan Hofer
 # Purpose: Data prep for Group project
-
+rm(list = ls())
 setwd("../") #set the working environment to "2023_FSS_Group_Project"
 source("2023_FSS_Group_Project_Colombia/terms_and_definitions.R") #load in common terms and defintions    
 
@@ -10,8 +10,8 @@ limit  <- 100000 # dataset has 60k rows, 100k should get all data
 # 1. Load data ----------------------------------------------------------------- 
 ## 1.1 Death data --------------------------------------------------------------
 #https://www.cdc.gov/nchs/nvss/mortality_public_use_data.htm
-data_deaths_complete <- read_table(paste0(path_raw, "Mort2018US.PubUse.txt")) 
-data_deaths_complete_2 <- read.csv(paste0(path_raw, "Mort2018US.PubUse.txt")) 
+#test <- read.csv(paste0(path_raw, "mort2021us.csv"))
+
 
 # https://data.cdc.gov/NCHS/VSRR-Provisional-Drug-Overdose-Death-Counts/xkb8-kh2a
 data_VSRR <- read.csv("https://data.cdc.gov/resource/xkb8-kh2a.csv?$limit=100000")
@@ -21,6 +21,9 @@ data_injuryfacts <- readxl::read_xlsx(paste0(path_raw,
                                         "Drug Poisoning deaths and rates .xlsx"),
                                  skip = 1)
 
+controls <- readRDS(paste0(path_raw, "Export_share.Rds"))
+controls <- readRDS(paste0(path_raw, "Controls cleaned CEPII grid.Rdata"))
+
 ## 1.2 Drug data --------------------------------------------------------------
 
 drugs_nw_20_23 <- read.csv(paste0(path_raw, "nationwide-drugs-fy20-fy23.csv"))
@@ -29,9 +32,28 @@ drugs_nw_19_22 <- read.csv(paste0(path_raw, "nationwide-drugs-fy19-fy22.csv"))
 drugs_amo_20_23 <- read.csv(paste0(path_raw, "amo-drug-seizures-fy20-fy23.csv"))
 drugs_amo_19_22 <- read.csv(paste0(path_raw, "amo-drug-seizures-fy19-fy22.csv"))
 
-
 # 2. prep data -----------------------------------------------------------------
 # 2.1 deaths -----------------------------------------------------------------
+files <- list.files(paste0(path_raw, "us_mortality"))[-1]
+
+data_out <- data.frame()
+#enicon <- paste0("enicon_", 1:20)
+
+for(i in 1:length(files)){
+  us_mort <- read.csv(paste0(path_raw,"us_mortality/", files[i]))
+  
+  us_mort <- us_mort %>% 
+    select(monthdth,enicon_1)%>%
+    filter(enicon_1 %in% c("T404", "T405"))%>%
+    mutate(indicator = 1)%>%
+    mutate(year = i)
+  
+  us_mort <- aggregate(data = us_mort, indicator ~ enicon_1 + monthdth + year, FUN = sum)
+  data_out <- rbind(data_out, us_mort)
+}
+
+
+
 
 data_VSRR_prov <- data_VSRR %>%
   mutate(year_month = paste0(year, "_", month))%>%
@@ -70,7 +92,7 @@ drugs <- drugs %>%
     left_join(months, by = "month")%>%
     mutate(date = dmy(paste0("1-",month_num,"-", year)))%>% #for plotting
     mutate(date_stata = paste0(year,month_num))%>% #for merge with stata
-    select(-c(year, month_num,month))
+    select(-c(month))
 
 
 
