@@ -372,9 +372,28 @@ mcolor(red) lcolor(red%60) msize(small) msymbol(Sh) lpattern(shortdash) mlc(red)
 
 
 /*
-
+Controll matrix: we define the following control variables
+	
+	Economic Output Index: to controll for economic performance
+	Exchange rate depreciation: to controll for drug international price volatility out of exchange rate
+	ENSO INDEX: El niño/niña temperature + precipitation data to control for extreme temperatures/precipitation periods that might affect the natural volatility of crops plantations/output
+	
 
 */
+
+* compute weights: weights are computed as the amount of plantes coca (kilometers squared) of each state over the sum of the eight states during 2022
+gen weight = 0
+replace weight = 31.3880/100 if DPTO == 52 // Nariño weight
+replace weight = 33.9215/100 if DPTO == 54 // Norte de Santander
+replace weight = 15.6379/100 if DPTO == 19 // Cauca
+replace weight = 4.4422/100 if DPTO == 5 // Antioquia
+replace weight = 6.9754/100 if DPTO == 13 // Bolivar
+replace weight = 4.4455/100 if DPTO == 23 // Cordoba
+replace weight = 1.1029/100 if DPTO == 18 // Caqueta
+replace weight = 2.0866/100 if DPTO == 27 // Choco
+
+* Keep top 3
+*keep if DPTO == 52 | DPTO == 54 | DPTO == 19
 
 *keep if period <= 731 | period >= 756
 xtset DPTO period
@@ -382,17 +401,14 @@ xtset DPTO period
 *************************** Seized drug data ******************************
 eststo clear
 * 1. No fixed effects
-eststo: reghdfe real_income_gr fent_gr coca_gr, noabs vce(cluster DPTO)
+eststo: reghdfe real_income_gr fent_gr coca_gr [aweight = weight], noabs vce(cluster DPTO)
 	estadd local SFE $\times$
 	estadd local TFE $\times$
 
 * 2. State-level fixed effects
-preserve
-drop if DPTO == 5 | DPTO == 23 
-eststo: reghdfe real_income_gr fent_gr coca_gr, abs(DPTO) vce(cluster DPTO)
+eststo: reghdfe real_income fent_gr coca_gr [aweight = weight], abs(DPTO) vce(cluster DPTO)
 	estadd local SFE $\checkmar$
 	estadd local TFE $\times$	
-restore
 * 3. 
 eststo: reghdfe real_income_gr fent_gr coca_gr, nocons abs(period) vce(cluster DPTO)
 	estadd local SFE $\checkmar$
