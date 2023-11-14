@@ -396,8 +396,10 @@ replace weight = 2.0866/100 if DPTO == 27 // Choco
 *keep if DPTO == 52 | DPTO == 54 | DPTO == 19
 
 *keep if period <= 731 | period >= 756
-xtset DPTO period
 
+drop _merge
+xtset DPTO period
+save "$data/Panel_dependent.dta", replace
 *************************** Seized drug data ******************************
 eststo clear
 * 1. No fixed effects
@@ -429,5 +431,32 @@ prefoot("\arrayrulecolor{black!10}\midrule") ///
 postfoot("\arrayrulecolor{black}\bottomrule" "\multicolumn{5}{c}{*** p$<$0.01, ** p$<$0.05, * p$<$0.1}" "\end{tabular}")	
 
 
-*************************** Death records data ****************************
+//////////////////////////////////////////////////////
+//////////// Adding controls /////////////////////////
+//////////////////////////////////////////////////////
 
+use "$data/Panel_dependent.dta", clear
+* merge the controls
+
+* ENSO index
+merge m:1 period using "$data/ENSO.dta"
+deek if _merge == 3
+
+drop if coca_gr ==.
+xtset DPTO period
+eststo clear
+* 1. No fixed effects
+eststo: reghdfe real_income_gr fent_gr coca_gr anom [aweight = weight], noabs vce(cluster DPTO)
+	estadd local SFE $\times$
+	estadd local TFE $\times$
+
+* 2. State-level fixed effects
+eststo: reghdfe real_income fent_gr coca_gr [aweight = weight], abs(DPTO) vce(cluster DPTO)
+	estadd local SFE $\checkmar$
+	estadd local TFE $\times$	
+
+rlasso , i.DPTO
+
+rlasso real_income fent_gr coca_gr anom, fe robust cluster(DPTO)
+
+rlasso real_income fent_gr coca_gr anom i.division_yw, fe partial(i.division_yw) robust cluster(UniqID)
