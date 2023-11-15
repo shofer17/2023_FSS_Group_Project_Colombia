@@ -11,6 +11,8 @@ global data_clean "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Proj
 
 global tab_folder "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\Tables"
 
+global folder "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\"
+
 /*
 --------------------- General characteristics -------------------------
 dataset name: Características generales, seguridad social en salud y educación.DTA
@@ -428,6 +430,25 @@ posthead("& \multicolumn{4}{c}{$\Delta$ Real Income} \\ \hline  &  &  &  &  &  \
 prefoot("\arrayrulecolor{black!10}\midrule") ///
 postfoot("\arrayrulecolor{black}\bottomrule" "\multicolumn{5}{c}{*** p$<$0.01, ** p$<$0.05, * p$<$0.1}" "\end{tabular}")	
 
-
-*************************** Death records data ****************************
-
+//////////////////////////////////////////////////////
+//////////// Adding controls /////////////////////////
+//////////////////////////////////////////////////////
+use "$data/Panel_dependent.dta", clear
+* merge the controls
+* ENSO index
+merge m:1 period using "$data/ENSO.dta"
+deek if _merge == 3
+drop if coca_gr ==.
+xtset DPTO period
+eststo clear
+* 1. No fixed effects
+eststo: reghdfe real_income_gr fent_gr coca_gr anom [aweight = weight], noabs vce(cluster DPTO)
+	estadd local SFE $\times$
+	estadd local TFE $\times$
+* 2. State-level fixed effects
+eststo: reghdfe real_income fent_gr coca_gr [aweight = weight], abs(DPTO) vce(cluster DPTO)
+	estadd local SFE $\checkmar$
+	estadd local TFE $\times$	
+rlasso , i.DPTO
+rlasso real_income fent_gr coca_gr anom, fe robust cluster(DPTO)
+rlasso real_income fent_gr coca_gr anom i.division_yw, fe partial(i.division_yw) robust cluster(UniqID)
