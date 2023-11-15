@@ -43,7 +43,7 @@ for(i in 1:nrow(out.check)){
     
     out.check$filename[i] <- gsub(".tgz","", data_frames$Name[grepl("75N180W", data_frames$Name)])
     #download.file(paste0(url, out.check$filename[i], ".tgz"), destfile = paste0("tar_files/", out.check$filename[i] ,".tgz"))
-    #untar(tarfile = paste0("tar_files/", paste0(out.check$filename[i], ".tgz")), exdir = paste0("tif_files/"))
+    untar(tarfile = paste0("tar_files/", paste0(out.check$filename[i], ".tgz")), exdir = paste0("tif_files/"))
    
      } else {
     out.check$is.available[i] <- F
@@ -51,6 +51,7 @@ for(i in 1:nrow(out.check)){
 }
 
 writexl::write_xlsx(out.check, "file_overview.xlsx")
+out.check <- readxl::read_xlsx("file_overview.xlsx")
 
 #set wd momentarily back to drive. Data was not stored in drive as it was too much (ca. 50GB)
 setwd("I:/Meine Ablage/2023_FSS_Group_Project")
@@ -83,7 +84,7 @@ nl_states <- nl_states %>%
 cropbox <- extent(shp)
 
 
-for (i in 55:nrow(out.check)){
+for (i in 1:nrow(out.check)){
   print(i)
   cropbox <- extent(shp)
   full_grid=raster(paste0("tif_files/", out.check$filename[i], ".avg_rade9h.tif"))
@@ -117,8 +118,39 @@ for (i in 55:nrow(out.check)){
 nl_states <- readxl::read_xlsx("nl_states.xlsx")
 #seasonality adjustment
 install.packages("seasonal")
-install.packages("RTools")
+library(seasonal)
+library(tidyverse)
 nl_states$date_r <- as.Date(paste0(nl_states$year,"-", nl_states$month,"-01"))
+base::detach(package:raster)
+
+
+for(i in 1:length(unique(nl_states$states))){
+  
+  states <- unique(nl_states$states)[i]
+  ts_nl_states <- nl_states %>%
+    filter(state == states) %>%
+    select(date_r, value_mean, value_max, value_min, value_band_low,value_band_mid,value_band_higher)
+  
+  
+  for(y in 1:(ncol(ts_nl_states))-1){
+    ts_loop <- ts_nl_states[, c(1,y)]
+    ts_loop <- ts_loop %>% arrange(ymd(ts_loop$date_r)) %>%
+      select(-date_r)%>%
+      ts(start = 2019, frequency = 12)
+    
+    
+    t <- seas(ts_loop, x11 = "")
+  }
+    
+    
+  
+}
+
+
+ts_nl_states <- ts(nl_states[c(3,5,6,7)], frequency = 12, start = 1)
+
+seas(ts_nl_states)
+
 
 brk = c(0.1, 1, 10, 100, 1000, 5000)
 image(imported_raster, col = col)
