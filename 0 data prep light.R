@@ -5,28 +5,33 @@ source("2023_FSS_Group_Project_Colombia/terms_and_definitions.R") #load in commo
 
 #install.packages("sf")
 library(sf)
-library(rgdal)
 library(raster)
 library(rvest)
-
-# Read in Lightdata files and take values  -------------------------------------
+library(tidyverse)
 
 setwd("~/FSS_Group_Project_Nightlight")
 
+# Read in Lightdata files and take values  -------------------------------------
+
+# create df to cycle trough and cover all year-month combinations
 out.check <- expand.grid("year" = 2019:2023, #prepare frame to cycle trough
                         "month" = c(paste0("0", 1:9), 10:12))
 out.check$is.available <- NA #check if we downloaded everything
 out.check$date <- paste0(out.check$year,out.check$month) #
-out.check$filename <- NA
-out.check$value_mean <- NA
-out.check$value_max <- NA
-out.check$value_min <- NA
-out.check$value_band <- NA
+out.check <- out.check %>%
+  filter(!(year == 2023 & month %in% c("08", "09", 10, 11, 12))) #no data yet
 
 
-for(i in 6:nrow(out.check)){ #nrow(out.check)
-  url <- paste0("https://eogdata.mines.edu/nighttime_light/monthly/v10/", 
+#go trough all year-month combinations and grab the data file. Then unpack it and save it
+for(i in 1:nrow(out.check)){ 
+  
+  if(out.check$date[i] == "202208"){
+    url <-  paste0("https://eogdata.mines.edu/nighttime_light/monthly/v10/", 
+                   out.check$year[i], "/",out.check$date[i], "/NOAA-20/vcmslcfg/") 
+  } else{
+    url <- paste0("https://eogdata.mines.edu/nighttime_light/monthly/v10/", 
                 out.check$year[i], "/",out.check$date[i], "/vcmslcfg/")
+  }
   
   webpage <- read_html(url)
   tables <- html_nodes(webpage, "table")
@@ -37,41 +42,92 @@ for(i in 6:nrow(out.check)){ #nrow(out.check)
     out.check$is.available[i] <- T
     
     out.check$filename[i] <- gsub(".tgz","", data_frames$Name[grepl("75N180W", data_frames$Name)])
-    download.file(paste0(url, out.check$filename[i], ".tgz"), destfile = paste0("tar_files/", out.check$filename[i] ,".tgz"))
-    
-    
-    untar(tarfile = paste0("tar_files/", paste0(out.check$filename[i], ".tgz")), exdir = paste0("tif_files/"))
-    
-    
-    } else {
+    #download.file(paste0(url, out.check$filename[i], ".tgz"), destfile = paste0("tar_files/", out.check$filename[i] ,".tgz"))
+    #untar(tarfile = paste0("tar_files/", paste0(out.check$filename[i], ".tgz")), exdir = paste0("tif_files/"))
+   
+     } else {
     out.check$is.available[i] <- F
     }
 }
 
+writexl::write_xlsx(out.check, "file_overview.xlsx")
 
+#set wd momentarily back to drive. Data was not stored in drive as it was too much (ca. 50GB)
+setwd("I:/Meine Ablage/2023_FSS_Group_Project")
+source("2023_FSS_Group_Project_Colombia/terms_and_definitions.R") #load in common terms and defintions    
+
+states <- c("Antioquia", 
+            "Bolivar","Bolívar",
+            "Caqueta","Caquetá", 
+            "Cauca", 
+            "Cordoba","Córdoba",
+            "Putumayo", 
+            "Nariño", "Narino", 
+            "Norte de Santander"
+)
 # Read the .shp file
 shp <- st_read(paste0(path_raw, "shp_files/col-administrative-divisions-shapefiles/col_admbnda_adm1_mgn_20200416.shp"))
 shp <- shp %>%
   filter(ADM1_ES %in% states)
 
+setwd("~/FSS_Group_Project_Nightlight")
 
-brk = c(0.1, 1, 10, 100, 1000, 5000)
+nl_states <- expand.grid("year" = 2019:2023, #prepare frame to cycle trough
+            "month" = c(paste0("0", 1:9), 10:12),
+            "states" = shp$ADM1_ES)
+nl_states$date <- paste0(nl_states$year, nl_states$month)
+nl_states <- nl_states %>%
+  filter(!(year == 2023 & month %in% c("08", "09", 10, 11, 12))) #no data yet
+
+
 cropbox <- extent(shp)
 
 
-
-for (i in 1:5){
+for (i in 55:nrow(out.check)){
+  print(i)
+  cropbox <- extent(shp)
   full_grid=raster(paste0("tif_files/", out.check$filename[i], ".avg_rade9h.tif"))
-  crop_grid <- crop(full_grid, cropbox)
-  out.check$value_mean[i] <- mean(values(crop_grid)[values(crop_grid) >= 0])
-  out.check$value_max[i] <- max(values(crop_grid)[values(crop_grid) >= 0])
-  out.check$value_min[i] <- min(values(crop_grid)[values(crop_grid) >= 0])
-  out.check$value_band[i] <- mean(values(crop_grid)[values(crop_grid) >= 0.6 & values(crop_grid) <= 3])
+  crop_grid <- crop(full_grid, cropbox) #reduce to colombia
+  
+  for(y in 1:length(shp$ADM1_ES)){
+    print(y)
+    states_shape <- shp %>%
+      filter(ADM1_ES %in% unique(nl_states$states)[y])
+    
+    cropbox <- extent(states_shape)
+    crop_grid <- crop(full_grid, cropbox) #box around state
+    crop_grid <- raster::mask(crop_grid, states_shape) #reduce to state itself
+    
+    position <- nl_states$date == out.check$date[i] & nl_states$states == shp$ADM1_ES[y]
+    
+    nl_states$value_mean[position ] <- mean(na.omit(values(crop_grid))[na.omit(values(crop_grid)) >= 0])
+    nl_states$value_max[position] <- max(na.omit(values(crop_grid))[na.omit(values(crop_grid)) >= 0])
+    nl_states$value_min[position] <- min(na.omit(values(crop_grid))[na.omit(values(crop_grid)) >= 0])
+    nl_states$value_band_low[position] <- mean(na.omit(values(crop_grid))[na.omit(values(crop_grid)) >= 0.6 & na.omit(values(crop_grid)) <= 3]) #file:///C:/Users/smhof/Downloads/remotesensing-13-00922.pdf
+    nl_states$value_band_mid[position] <- mean(na.omit(values(crop_grid))[na.omit(values(crop_grid)) >= 0.6 & na.omit(values(crop_grid)) <= 10]) #file:///C:/Users/smhof/Downloads/remotesensing-13-00922.pdf
+    nl_states$value_band_higher[position] <- mean(na.omit(values(crop_grid))[na.omit(values(crop_grid)) >= 3]) #file:///C:/Users/smhof/Downloads/remotesensing-13-00922.pdf
+    
+  }
+  rm(crop_grid)
+  rm(r_masked)
+  writexl::write_xlsx(nl_states, "nl_states.xlsx")
 }
 
 
+nl_states <- readxl::read_xlsx("nl_states.xlsx")
+#seasonality adjustment
+install.packages("seasonal")
+install.packages("RTools")
+nl_states$date_r <- as.Date(paste0(nl_states$year,"-", nl_states$month,"-01"))
+
+brk = c(0.1, 1, 10, 100, 1000, 5000)
 image(imported_raster, col = col)
-plot(imported_raster_crop, col = col, breaks = brk)
+plot(crop_grid, col = col, breaks = brk)
+
+
+
+ggplot(nl_states, aes(x = date_r, y = value_band, color = states))+
+  geom_line(aes(color = states))
 
 
 # archive ----------------------------------------------------------------------
