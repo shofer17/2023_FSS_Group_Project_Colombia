@@ -11,6 +11,23 @@ path_raw = "data_raw/"
 path_clean = "2023_FSS_Group_Project_Colombia/data_clean/"
 path_charts = "charts/"
 
+
+# variables
+
+states <- c("Antioquia", 
+            "Bolivar","Bolívar",
+            "Caqueta","Caquetá", 
+            "Cauca", 
+            "Cordoba","Córdoba",
+            "Putumayo", 
+            "Nariño", "Narino", 
+            "Norte de Santander"
+            )
+
+
+#colors
+col <- terrain.colors(10)
+
 # Libraries
 library(tidyverse)
 library(haven)
@@ -18,4 +35,5 @@ library(sqldf)
 # install.packages("BiocManager")
 # BiocManager::install("rhdf5")
 library(rhdf5)
+
 
