@@ -136,3 +136,4 @@ gen period = ym(year, monthnumber)
 keep period inflationwrttolastmonth DPTO
 rename inflationwrttolastmonth monthly_inflation
 * probably this time series need seasonal adjustment
+format %tm period
