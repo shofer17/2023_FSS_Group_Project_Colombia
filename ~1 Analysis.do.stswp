@@ -5,6 +5,8 @@ Survey data
 */
 
 * Define paths
+global folder "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia"
+
 global data "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\Data_processing"
 
 global data_clean "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\data_clean"
