@@ -35,7 +35,9 @@ drop if yr < 2019
 keep period yr month total anom
 format %tm period
 
-xtset DPTO period
+rename anom ENSO
+keep ENSO period
+*xtset DPTO period
 
 save "$data/ENSO.dta", replace
 
@@ -144,18 +146,84 @@ format %tm period
 save "$data/inflation_intermediate.dta", replace
 
 **** 4. Coca plantation estimate
-import excel "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\Coca_Month.xlsx", sheet("AllTogether") firstrow clear
+import excel "$folder\Coca_Month.xlsx", sheet("AllTogether") firstrow clear
+destring *, replace
+encode Departamento, gen(DPTOS)
+gen test = DPTOS +0
+gen DPTO =.
+replace DPTO = 5 if DPTOS == 1
+replace DPTO = 13 if DPTOS == 2
+replace DPTO = 18 if DPTOS == 3
+replace DPTO = 19 if DPTOS == 4
+replace DPTO = 23 if DPTOS == 5
+replace DPTO = 52 if DPTOS == 6
+replace DPTO = 54 if DPTOS == 7
+replace DPTO = 86 if DPTOS == 8 
+
+* define period
+gen period = ym(Year, MonthNumber)
+
+* keep important variabless
+keep period EstimateProductionHa DPTO
+
+* probably this time series need seasonal adjustment
+format %tm period
+
+save "$data/EstimateProductionHa.dta", replace
+
+******** 5. Light intensity data
+import excel "$folder\data_clean\nl_states_adjusted.xlsx", sheet("Sheet1") firstrow clear
+
+rename date_r period
 
 
-*********** 4. ISE data (already seasonal adjusted by the national statistic office)
+*format %tm period // period not working in the same format
+
+encode states, gen(DPTOS)
+gen test = DPTOS +0
+gen DPTO =.
+replace DPTO = 5 if DPTOS == 1
+replace DPTO = 13 if DPTOS == 2
+replace DPTO = 18 if DPTOS == 3
+replace DPTO = 19 if DPTOS == 4
+replace DPTO = 23 if DPTOS == 5
+replace DPTO = 52 if DPTOS == 6
+replace DPTO = 54 if DPTOS == 7
+replace DPTO = 86 if DPTOS == 8 
+
+rename value_mean avg_monthly_light_intensity
+keep period avg_monthly_light_intensity DPTO
+
+gen month = month(period)
+gen year = year(period)
+gen perio = ym(year, month)
+drop period
+rename perio period
+keep period avg_monthly_light_intensity DPTO
+sort DPTO period
+save "$data/light_data.dta", replace
+
+
+******** 6. ISE data (already seasonal adjusted by the national statistic office)
 import excel "$folder\anex-ISE-12actividades-sep2023.xlsx", sheet("Hoja1") firstrow clear
 
 gen period = ym(year, month)
 format %tm period
-
+drop year month
 save "$data/ISE.dta", replace
-**********************
 
+
+********* 7. Exchange rate
+import excel "$folder\TRM.xlsx", firstrow clear
+
+gen period = ym(Year, Month)
+format %tm period
+
+rename Promediomensual Exchange_rate
+
+keep period Exchange_rate
+
+save "$data/Exchange_rate.dta", replace
 
 **** Compile database withouth Seasonal Adjustment
 
@@ -173,29 +241,69 @@ save "$data/ISE.dta", replace
 
 *** US data (works as national monthly data in the sense there is no state-variation)
 
-* Avg Rural Household (nominal)
+* 1. Avg Rural Household (nominal)
 use "$data/Real_income_to_seasonal_adjust.dta", clear
 keep INGLABO period DPTO
 rename INGLABO Avg_rural_income_nominal
 
-* Monthly inflation
+* 2. Monthly inflation
 merge m:m period DPTO using "$data/inflation_intermediate.dta"
 drop _merge
 
-* Laboral market variables
+* 3. Laboral market variables
 merge m:m period DPTO using "$data/Laboral_data_processed"
 
 sort DPTO period
-* Coca plantation estimate
 
-use "$data/real_income_SA.dta", clear
-destring *, replace
-gen period = ym(Year, Month)
-format %tm period
+drop Año month Class DPTOS _merge
 
-rename value real_income
+* 4. Coca plantation estimate
 
-use "$data/ENSO.dta", clear
+merge m:m period DPTO using "$data/EstimateProductionHa.dta"
+drop _merge
+
+* 5. Light intensity
+
+merge m:m period DPTO using "$data/light_data.dta"
+drop _merge
+
+* 6. (natinoal) ENSO
+merge m:1 period using "$data/ENSO.dta"
+drop _merge
+
+* 7. (national) ISE
+merge m:1 period using "$data/ISE.dta"
+drop _merge
+
+* 8. (national) Exchange Rate
+merge m:1 period using "$data/Exchange_rate.dta"
+drop _merge
+
+* Change names
+rename Ocupados Employed
+rename Noocupados Non_employed
+rename Desocupados Unemployed
+rename Inactivos Inactives
+rename PEA EAP
+rename TD Unemployment_rate
+rename TGP Participation_rate
+rename TO Occupied_rate
 
 
+* label variables
+label var Avg_rural_income_nominal "Average Rural Household Income (nominal non SA)"
+label var monthly_inflation "State monthly inflation"
+label var Employed "Employed Population"
+label var Non_employed "Population not seeking for job"
+label var Unemployed "Unemployede population"
+label var EAP "Economic Active Population"
+label var PET "Population in labor age"
+label var Unemployment_rate "Unemployment rate"
+label var Participation_rate "Participation rate"
+label var EstimateProductionHa "Estimated Coca Production based on Quinoa"
+label var avg_monthly_light_intensity "Average Monthly Night Light Intensity"
+label var ISE "Economic Performance Index"
+
+
+save "$data/Database.dta", clear
 * Export variables to R for seasonal adjustment
