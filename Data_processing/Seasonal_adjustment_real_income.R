@@ -57,7 +57,7 @@ rm(list=ls())
 
 library(haven)
 library(seasonal)
-Real_income_to_seasonal_adjust <- read_dta("C:/Users/juanf/Documents/FSS/Data_processing/Real_income_to_seasonal_adjust.dta")
+Real_income_to_seasonal_adjust <- read_dta("C:/Users/juanf/OneDrive/Documentos/GitHub/2023_FSS_Group_Project_Colombia/Data_processing/Real_income_to_seasonal_adjust.dta")
 
 # Nariño
 x_1 = as.data.frame(Real_income_to_seasonal_adjust$real_income[Real_income_to_seasonal_adjust$DPTO== 52])
