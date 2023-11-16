@@ -120,36 +120,44 @@ nl_states <- readxl::read_xlsx("nl_states.xlsx")
 install.packages("seasonal")
 library(seasonal)
 library(tidyverse)
-nl_states$date_r <- as.Date(paste0(nl_states$year,"-", nl_states$month,"-01"))
 base::detach(package:raster)
+
+nl_states$date_r <- as.Date(paste0(nl_states$year,"-", nl_states$month,"-01"))
+
+out <- data.frame()
 
 
 for(i in 1:length(unique(nl_states$states))){
   
-  states <- unique(nl_states$states)[i]
+
+  out_loop <- data.frame("date_r" = ts_nl_states$date_r,
+                         "states" = unique(nl_states$states)[i])
+  
+  state_selected <- unique(nl_states$states)[i]
   ts_nl_states <- nl_states %>%
-    filter(state == states) %>%
+    filter(states == state_selected) %>%
     select(date_r, value_mean, value_max, value_min, value_band_low,value_band_mid,value_band_higher)
   
+  nm <- names(ts_nl_states)[2:7]
   
-  for(y in 1:(ncol(ts_nl_states))-1){
+  
+  for(y in 2:(ncol(ts_nl_states))){
     ts_loop <- ts_nl_states[, c(1,y)]
     ts_loop <- ts_loop %>% arrange(ymd(ts_loop$date_r)) %>%
       select(-date_r)%>%
-      ts(start = 2019, frequency = 12)
+      ts(start=c(2019,1), end=c(2023,7), frequency=12)
     
+    decomp<-decompose(ts_loop)  
+    seasadj <- ts_loop - decomp$seasonal
+
+    out_loop <- cbind(out_loop, seasadj)
     
-    t <- seas(ts_loop, x11 = "")
   }
-    
-    
-  
+  names(out_loop)[3:8] <- nm
+  out <- rbind(out, out_loop)
 }
 
-
-ts_nl_states <- ts(nl_states[c(3,5,6,7)], frequency = 12, start = 1)
-
-seas(ts_nl_states)
+writexl::write_xlsx(out, "nl_states_adjusted.xlsx")
 
 
 brk = c(0.1, 1, 10, 100, 1000, 5000)
@@ -158,7 +166,10 @@ plot(crop_grid, col = col, breaks = brk)
 
 
 
-ggplot(nl_states, aes(x = date_r, y = value_band, color = states))+
+ggplot(nl_states, aes(x = date_r, y = value_band_low, color = states))+
+  geom_line(aes(color = states))
+
+ggplot(out, aes(x = date_r, y = value_band_low, color = states))+
   geom_line(aes(color = states))
 
 
