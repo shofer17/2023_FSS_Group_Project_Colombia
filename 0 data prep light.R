@@ -14,16 +14,17 @@ setwd("~/FSS_Group_Project_Nightlight")
 # Read in Lightdata files and take values  -------------------------------------
 
 # create df to cycle trough and cover all year-month combinations
-out.check <- expand.grid("year" = 2019:2023, #prepare frame to cycle trough
+out.check <- expand.grid("year" = 2016:2023, #prepare frame to cycle trough
                         "month" = c(paste0("0", 1:9), 10:12))
 out.check$is.available <- NA #check if we downloaded everything
+out.check$filename <- NA
 out.check$date <- paste0(out.check$year,out.check$month) #
 out.check <- out.check %>%
   filter(!(year == 2023 & month %in% c("08", "09", 10, 11, 12))) #no data yet
 
 
 #go trough all year-month combinations and grab the data file. Then unpack it and save it
-for(i in 1:nrow(out.check)){ 
+for(i in 1:nrow(out.check)){ #nrow(out.check)
   
   if(out.check$date[i] == "202208"){
     url <-  paste0("https://eogdata.mines.edu/nighttime_light/monthly/v10/", 
@@ -43,7 +44,7 @@ for(i in 1:nrow(out.check)){
     
     out.check$filename[i] <- gsub(".tgz","", data_frames$Name[grepl("75N180W", data_frames$Name)])
     #download.file(paste0(url, out.check$filename[i], ".tgz"), destfile = paste0("tar_files/", out.check$filename[i] ,".tgz"))
-    untar(tarfile = paste0("tar_files/", paste0(out.check$filename[i], ".tgz")), exdir = paste0("tif_files/"))
+    #untar(tarfile = paste0("tar_files/", paste0(out.check$filename[i], ".tgz")), exdir = paste0("tif_files_2/"))
    
      } else {
     out.check$is.available[i] <- F
@@ -73,7 +74,7 @@ shp <- shp %>%
 
 setwd("~/FSS_Group_Project_Nightlight")
 
-nl_states <- expand.grid("year" = 2019:2023, #prepare frame to cycle trough
+nl_states <- expand.grid("year" = 2016:2023, #prepare frame to cycle trough
             "month" = c(paste0("0", 1:9), 10:12),
             "states" = shp$ADM1_ES)
 nl_states$date <- paste0(nl_states$year, nl_states$month)
@@ -86,8 +87,9 @@ cropbox <- extent(shp)
 
 for (i in 1:nrow(out.check)){
   print(i)
+  if(out.check$year[i] <= 2018){tif <- "tif_files_2/"}else{tif <- "tif_files/"}
   cropbox <- extent(shp)
-  full_grid=raster(paste0("tif_files/", out.check$filename[i], ".avg_rade9h.tif"))
+  full_grid=raster(paste0(tif, out.check$filename[i], ".avg_rade9h.tif"))
   crop_grid <- crop(full_grid, cropbox) #reduce to colombia
   
   for(y in 1:length(shp$ADM1_ES)){
@@ -117,7 +119,6 @@ for (i in 1:nrow(out.check)){
 
 nl_states <- readxl::read_xlsx("nl_states.xlsx")
 #seasonality adjustment
-install.packages("seasonal")
 library(seasonal)
 library(tidyverse)
 base::detach(package:raster)
@@ -145,7 +146,7 @@ for(i in 1:length(unique(nl_states$states))){
     ts_loop <- ts_nl_states[, c(1,y)]
     ts_loop <- ts_loop %>% arrange(ymd(ts_loop$date_r)) %>%
       select(-date_r)%>%
-      ts(start=c(2019,1), end=c(2023,7), frequency=12)
+      ts(start=c(2016,1), end=c(2023,7), frequency=12)
     
     decomp<-decompose(ts_loop)  
     seasadj <- ts_loop - decomp$seasonal
