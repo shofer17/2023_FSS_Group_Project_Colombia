@@ -305,5 +305,5 @@ label var avg_monthly_light_intensity "Average Monthly Night Light Intensity"
 label var ISE "Economic Performance Index"
 
 
-save "$data/Database.dta", clear
+save "$data/Database.dta", replace
 * Export variables to R for seasonal adjustment
