@@ -164,7 +164,7 @@ replace DPTO = 86 if DPTOS == 8
 gen period = ym(Year, MonthNumber)
 
 * keep important variabless
-keep period EstimateProductionHa DPTO
+keep period EstimateProductionHa DPTO Year MonthNumber
 
 * probably this time series need seasonal adjustment
 format %tm period
@@ -278,6 +278,7 @@ merge m:m period DPTO using "$data/Laboral_data_processed"
 sort DPTO period
 
 drop Año month Class DPTOS _merge
+*drop Class DPTOS _merge
 
 * 4. Coca plantation estimate
 
@@ -305,6 +306,12 @@ drop _merge
 merge m:1 period using "$data/seizure.dta"
 drop _merge
 
+* create year and month
+xtset DPTO period
+format %tm period
+rename MonthNumber Month
+replace Year = Year[_n-1] if Year ==.
+replace Month = Month[_n-1] if Month ==.
 * Change names
 rename Ocupados Employed
 rename Noocupados Non_employed
