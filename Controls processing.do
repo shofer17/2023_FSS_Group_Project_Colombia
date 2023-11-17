@@ -225,6 +225,28 @@ keep period Exchange_rate
 
 save "$data/Exchange_rate.dta", replace
 
+
+********* 8. US seizure data
+use "$data_clean\seized_by_drug.dta", clear
+
+destring *, replace
+
+gen period = ym(year, month_num)
+format %tm period
+
+encode drug, gen(drug_type)
+keep kg period drug_type
+
+bys period: egen total_kg = sum(kg)
+gen ratio_fent = kg/total_kg if drug_type ==  2
+gen ratio_cocaine = kg/total_kg if drug_type == 1
+gen fent_kg = kg if drug_type ==  2
+gen cocaine_kg = kg if drug_type ==  1
+
+collapse (max) ratio* fent_kg cocaine_kg, by(period)
+
+save "$data/seizure.dta", replace
+
 **** Compile database withouth Seasonal Adjustment
 
 *** State monthly data
@@ -279,6 +301,10 @@ drop _merge
 merge m:1 period using "$data/Exchange_rate.dta"
 drop _merge
 
+* 9. (US) Seizures
+merge m:1 period using "$data/seizure.dta"
+drop _merge
+
 * Change names
 rename Ocupados Employed
 rename Noocupados Non_employed
@@ -291,6 +317,8 @@ rename TO Occupied_rate
 
 
 * label variables
+label var DPTO "State (number)"
+label var period "Period (month x year)"
 label var Avg_rural_income_nominal "Average Rural Household Income (nominal non SA)"
 label var monthly_inflation "State monthly inflation"
 label var Employed "Employed Population"
@@ -303,7 +331,10 @@ label var Participation_rate "Participation rate"
 label var EstimateProductionHa "Estimated Coca Production based on Quinoa"
 label var avg_monthly_light_intensity "Average Monthly Night Light Intensity"
 label var ISE "Economic Performance Index"
-
+label var ratio_fent "Ratio of Fentanyl seizures over the sum of cocaine and fentanyl seizures"
+label var ratio_cocaine "Ratio of Cocaine seizures over the sum of cocaine and fentanyl seizures"
+label var fent_kg "Amount of Fentanyle seized in kilograms"
+label var cocaine_kg "Amount of Cocaine seized in kilograms"
 
 save "$data/Database.dta", replace
 * Export variables to R for seasonal adjustment
