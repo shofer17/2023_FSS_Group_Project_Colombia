@@ -119,7 +119,6 @@ for (i in 1:nrow(out.check)){
 
 nl_states <- readxl::read_xlsx("nl_states.xlsx")
 #seasonality adjustment
-install.packages("seasonal")
 library(seasonal)
 library(tidyverse)
 base::detach(package:raster)
@@ -147,7 +146,7 @@ for(i in 1:length(unique(nl_states$states))){
     ts_loop <- ts_nl_states[, c(1,y)]
     ts_loop <- ts_loop %>% arrange(ymd(ts_loop$date_r)) %>%
       select(-date_r)%>%
-      ts(start=c(2019,1), end=c(2023,7), frequency=12)
+      ts(start=c(2016,1), end=c(2023,7), frequency=12)
     
     decomp<-decompose(ts_loop)  
     seasadj <- ts_loop - decomp$seasonal
