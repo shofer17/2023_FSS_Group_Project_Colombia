@@ -4,9 +4,9 @@ source("2023_FSS_Group_Project_Colombia/terms_and_definitions.R") #load in commo
 
 setwd("~/FSS_Group_Project_Nightlight")
 
-years <- 2016:2021
+years <- 2012:2021
 out <- data.frame()
-for(i in 1:length(years)){
+for(i in 4:length(years)){
   
   path <- paste0("mortality_files/mort", years[i], ".csv")
   
