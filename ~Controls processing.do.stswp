@@ -192,14 +192,17 @@ replace DPTO = 54 if DPTOS == 7
 replace DPTO = 86 if DPTOS == 8 
 
 rename value_mean avg_monthly_light_intensity
-keep period avg_monthly_light_intensity DPTO
+rename value_band_low avg_monthly_light_small
+rename value_band_mid avg_monthly_light_medium
+rename value_band_higher avg_monthly_light_big
+keep period avg_monthly_light_* DPTO 
 
 gen month = month(period)
 gen year = year(period)
 gen perio = ym(year, month)
 drop period
 rename perio period
-keep period avg_monthly_light_intensity DPTO
+keep period avg_monthly_light_* DPTO 
 sort DPTO period
 save "$data/light_data.dta", replace
 
@@ -337,6 +340,9 @@ label var Unemployment_rate "Unemployment rate"
 label var Participation_rate "Participation rate"
 label var EstimateProductionHa "Estimated Coca Production based on Quinoa"
 label var avg_monthly_light_intensity "Average Monthly Night Light Intensity"
+label var avg_monthly_light_small "Average Monthly Night Light Intensity for Small Villages"
+label var avg_monthly_light_medium "Average Monthly Night Light Intensity for Medium-size Villages"
+label var avg_monthly_light_big "Average Monthly Night Light Intensity for Big-size Villages (cities)"
 label var ISE "Economic Performance Index"
 label var ratio_fent "Ratio of Fentanyl seizures over the sum of cocaine and fentanyl seizures"
 label var ratio_cocaine "Ratio of Cocaine seizures over the sum of cocaine and fentanyl seizures"
