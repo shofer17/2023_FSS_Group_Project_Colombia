@@ -1,3 +1,9 @@
+# Purpose: Download and prepare nightlight data in Colombia for analysis. 
+# Author: Silvan Hofer
+# Date: 17.11.2023
+
+
+
 rm(list = ls())
 
 source("2023_FSS_Group_Project_Colombia/terms_and_definitions.R") #load in common terms and defintions    
