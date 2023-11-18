@@ -40,3 +40,4 @@ for(i in 1:length(years)){
 
 
 
+writexl::write_xlsx(out, path = "mortality_cocaine_fentanyl.xlsx")
