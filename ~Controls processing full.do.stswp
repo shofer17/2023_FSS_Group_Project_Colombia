@@ -487,6 +487,30 @@ rename INGLABO Avg_rural_income_nominal
 append using 
 * Avg Rural pre 2010-2020
 */
+** 1. number of seizures
+use "$data_clean\seized_by_drug_eventnum.dta", clear
+
+destring *, replace
+
+gen period = ym(year, month)
+sort period
+format %tm period
+
+encode drug, gen(drug_type)
+keep events period drug_type
+
+bys period: egen total_events = sum(events)
+gen ratio_fent_event = event/total_events if drug_type ==  2
+gen ratio_cocaine_event = event/total_events if drug_type == 1
+gen fent_event = events if drug_type ==  2
+gen cocaine_event = events if drug_type ==  1
+
+collapse (max) ratio* fent_event cocaine_event, by(period)
+
+save "$data/seizure_events.dta", replace
+
+
+
 
 * 1. Laboral and income data
 use "$data/Laboral_income_data_full.dta", clear
@@ -531,10 +555,14 @@ drop _merge
 merge m:1 period using "$data/seizure.dta"
 drop _merge
 
+
 * 10. (US) deaths
 merge m:1 period using "$data/US_deaths_full.dta"
 drop _merge 
 
+* 11. (US) number of seizures
+merge m:1 period using "$data/seizure_events.dta"
+drop _merge
 
 * create year and month
 xtset DPTO period
