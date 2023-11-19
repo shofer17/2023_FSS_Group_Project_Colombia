@@ -196,8 +196,8 @@ insobs 2, after(8*`k' + 2*`k' -2)
 
 * fill up variables
 replace DPTO = DPTO[_n-1] +1 if DPTO == .
-replace DPTO = 27 if DPTO == 14
-replace DPTO = 95 if DPTO == 15
+replace DPTO = 27 if DPTO == 14 | DPTO == 6 | DPTO == 55 | DPTO == 19 | DPTO == 24 | DPTO == 53 | (DPTO == 20 & DPTO[_n-1] == 19)
+replace DPTO = 95 if DPTO == 15 | DPTO == 7 | DPTO == 56 | DPTO == 20 | DPTO == 25 | DPTO == 54 | DPTO == 21 | DPTO == 56 | DPTO == 25 | DPTO == 54 | (DPTO == 20 & DPTO[_n+1] == 23)
 replace Inflationbase2018100 = Inflationbase2018100[_n-1] if DPTOS ==.
 replace MonthNumber = MonthNumber[_n-1] if DPTOS ==.
 replace year = year[_n-1] if DPTOS ==.
@@ -295,7 +295,7 @@ rename Promediomensual Exchange_rate
 
 keep period Exchange_rate
 
-save "$data/Exchange_rate.dta", replace
+save "$data/Exchange_rate_full.dta", replace
 
 
 ********* 8. US seizure data
@@ -305,7 +305,7 @@ destring *, replace
 
 gen period = ym(year, month_num)
 format %tm period
-
+sort period
 encode drug, gen(drug_type)
 keep kg period drug_type
 
@@ -319,6 +319,17 @@ collapse (max) ratio* fent_kg cocaine_kg, by(period)
 
 save "$data/seizure.dta", replace
 
+*** 9. US Mortality 
+import excel "$data_clean\mortality_cocaine_fentanyl.xlsx", sheet("Sheet1") firstrow clear
+
+gen period = ym(year, monthdth)
+format %tm period
+sort period
+   
+twoway (connected  only_fentanyl_related period) (connected  cocain_related_deaths period) (connected  only_cocaine_related period)  (connected  fentanyl_related_deaths period) 
+drop year
+drop monthdth
+save "$data/US_deaths_full.dta", replace
 **** Compile database withouth Seasonal Adjustment
 
 *** State monthly data
@@ -362,6 +373,8 @@ append using
 merge m:m period DPTO using "$data/inflation_intermediate_full.dta"
 drop _merge
 
+use "$data/inflation_intermediate_full.dta", clear
+
 * 3. Laboral market variables
 merge m:m period DPTO using "$data/Laboral_data_processed"
 
@@ -396,12 +409,20 @@ drop _merge
 merge m:1 period using "$data/seizure.dta"
 drop _merge
 
+* 10. (US) deaths
+merge m:1 period using "$data/US_deaths_full.dta"
+drop _merge 
+
+
 * create year and month
 xtset DPTO period
 format %tm period
 rename MonthNumber Month
 replace Year = Year[_n-1] if Year ==.
+replace Year = 2023 if period >= 756
+
 replace Month = Month[_n-1] if Month ==.
+replace Month = . if Year == 2023
 * Change names
 rename Ocupados Employed
 rename Noocupados Non_employed
@@ -435,6 +456,12 @@ label var ratio_fent "Ratio of Fentanyl seizures over the sum of cocaine and fen
 label var ratio_cocaine "Ratio of Cocaine seizures over the sum of cocaine and fentanyl seizures"
 label var fent_kg "Amount of Fentanyle seized in kilograms"
 label var cocaine_kg "Amount of Cocaine seized in kilograms"
+label var only_fentanyl_related "Number of deaths (US) caused only by fentanyl"
+label var cocain_related_deaths "Number of deaths (US) caused, among others, by fentanyl"
+label var only_cocaine_related "Number of deaths (US) caused only by cocaine"
+label var fentanyl_related_deaths"Number of deaths (US) caused, among others, by fentanyl"
+
+
 
 save "$data/Database_full.dta", replace
 * Export variables to R for seasonal adjustment
