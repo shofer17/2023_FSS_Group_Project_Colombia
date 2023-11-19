@@ -173,7 +173,7 @@ append
 
 import excel "$folder\Inflation.xlsx", sheet("Inflation(year-city)") firstrow clear
 destring *, replace
-encode state, gen(DPTOS)
+encode State, gen(DPTOS)
 gen test = DPTOS +0
 gen DPTO =.
 replace DPTO = 5 if DPTOS == 1
@@ -196,27 +196,27 @@ insobs 2, after(8*`k' + 2*`k' -2)
 
 * fill up variables
 replace DPTO = DPTO[_n-1] +1 if DPTO == .
-replace DPTO = 27 if DPTO == 87
-replace DPTO = 95 if DPTO == 88
-replace inflationwrttolastmonth = inflationwrttolastmonth[_n-1] if DPTOS ==.
-replace monthnumber = monthnumber[_n-1] if DPTOS ==.
+replace DPTO = 27 if DPTO == 14
+replace DPTO = 95 if DPTO == 15
+replace Inflationbase2018100 = Inflationbase2018100[_n-1] if DPTOS ==.
+replace MonthNumber = MonthNumber[_n-1] if DPTOS ==.
 replace year = year[_n-1] if DPTOS ==.
 
 * define period
-gen period = ym(year, monthnumber)
+gen period = ym(year, MonthNumber)
 
 * keep important variabless
-keep period inflationwrttolastmonth DPTO
-rename inflationwrttolastmonth monthly_inflation
+keep period Inflationbase2018100 DPTO
+rename Inflationbase2018100 CPI
 * probably this time series need seasonal adjustment
 format %tm period
 
-save "$data/inflation_intermediate.dta", replace
+save "$data/inflation_intermediate_full.dta", replace
 
 **** 4. Coca plantation estimate
-import excel "$folder\Coca_Month.xlsx", sheet("AllTogether") firstrow clear
+import excel "$folder\Coca-Monthly2010-2022.xlsx",  firstrow clear
 destring *, replace
-encode Departamento, gen(DPTOS)
+encode Dpto, gen(DPTOS)
 gen test = DPTOS +0
 gen DPTO =.
 replace DPTO = 5 if DPTOS == 1
@@ -229,20 +229,21 @@ replace DPTO = 54 if DPTOS == 7
 replace DPTO = 86 if DPTOS == 8 
 
 * define period
-gen period = ym(Year, MonthNumber)
+gen period = ym(Year, Month)
 
+rename Value EstimateProductionHa
 * keep important variabless
-keep period EstimateProductionHa DPTO Year MonthNumber
+keep period EstimateProductionHa DPTO Year Month
 
 * probably this time series need seasonal adjustment
 format %tm period
 
-save "$data/EstimateProductionHa.dta", replace
+save "$data/EstimateProductionHa_full.dta", replace
 
 ******** 5. Light intensity data
-import excel "$folder\data_clean\nl_states_adjusted.xlsx", sheet("Sheet1") firstrow clear
-
-rename date_r period
+import excel "$folder\data_clean\nl_states_new.xlsx", sheet("Sheet1") firstrow clear
+destring *, replace
+*rename date_r period
 
 
 *format %tm period // period not working in the same format
@@ -263,25 +264,25 @@ rename value_mean avg_monthly_light_intensity
 rename value_band_low avg_monthly_light_small
 rename value_band_mid avg_monthly_light_medium
 rename value_band_higher avg_monthly_light_big
-keep period avg_monthly_light_* DPTO 
+keep year month avg_monthly_light_* DPTO 
 
-gen month = month(period)
-gen year = year(period)
-gen perio = ym(year, month)
-drop period
-rename perio period
+*gen month = month(period)
+*gen year = year(period)
+gen period = ym(year, month)
+*drop period
+*rename perio period
 keep period avg_monthly_light_* DPTO 
 sort DPTO period
-save "$data/light_data.dta", replace
+format %tm period
+save "$data/light_data_full.dta", replace
 
 
 ******** 6. ISE data (already seasonal adjusted by the national statistic office)
-import excel "$folder\anex-ISE-12actividades-sep2023.xlsx", sheet("Hoja1") firstrow clear
-
+import excel "$folder\anex-ISE-12actividades-sep2023_full.xlsx", sheet("Hoja1") firstrow clear
 gen period = ym(year, month)
 format %tm period
 drop year month
-save "$data/ISE.dta", replace
+save "$data/ISE_full.dta", replace
 
 
 ********* 7. Exchange rate
@@ -358,7 +359,7 @@ append using
 
 
 * 2. Monthly inflation
-merge m:m period DPTO using "$data/inflation_intermediate.dta"
+merge m:m period DPTO using "$data/inflation_intermediate_full.dta"
 drop _merge
 
 * 3. Laboral market variables
@@ -371,20 +372,20 @@ drop Año month Class DPTOS _merge
 
 * 4. Coca plantation estimate
 
-merge m:m period DPTO using "$data/EstimateProductionHa.dta"
+merge m:m period DPTO using "$data/EstimateProductionHa_full.dta"
 drop _merge
 
 * 5. Light intensity
 
-merge m:m period DPTO using "$data/light_data.dta"
+merge m:m period DPTO using "$data/light_data_full.dta"
 drop _merge
 
 * 6. (natinoal) ENSO
-merge m:1 period using "$data/ENSO.dta"
+merge m:1 period using "$data/ENSO_full.dta"
 drop _merge
 
 * 7. (national) ISE
-merge m:1 period using "$data/ISE.dta"
+merge m:1 period using "$data/ISE_full.dta"
 drop _merge
 
 * 8. (national) Exchange Rate

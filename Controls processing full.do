@@ -39,11 +39,69 @@ rename anom ENSO
 keep ENSO period
 *xtset DPTO period
 
-save "$data/ENSO.dta", replace
+save "$data/ENSO_full.dta", replace
 
 
 * other controls
 *  2. Labor variables
+*2010-2020
+import excel "$folder\TD departamental pre.xlsx", firstrow clear
+destring *, replace
+encode Mes, gen(date)
+replace date = date[_n-1] if date ==.
+gen month = date
+replace month = 1 if date == 4 // DJF is january, not march
+replace month = 2 if date == 5 // JFM is february, not june
+replace month = 3 if date == 8 // FMA is march, not april
+replace month = 4 if date == 1 // april
+replace month = 5 if date == 9 // AMJ is may, not january
+replace month = 6 if date == 7 // MJJ is june, not september
+replace month = 7 if date == 6
+replace month = 8 if date == 2 // JAS is August, not may
+replace month = 9 if date == 12 // ASO is september, not february
+replace month = 10 if date == 11 // SON is october, not december
+replace month = 11 if date == 10
+replace month = 12 if date == 3 // SON is december, not october
+
+* drop total
+drop if month == 13
+encode Clase, gen(Class)
+drop if Class == 3
+
+gen per = ym(Año, month)
+encode Departamentos, gen(DPTOS)
+/*replace DPTOS =. if DPTOS < 54
+replace DPTOS = DPTOS[_n-1] if DPTOS ==.*/
+gen test = DPTOS +0
+gen DPTO = .
+replace DPTO = 5 if DPTOS == 1
+replace DPTO = 13 if DPTOS == 4
+replace DPTO = 18 if DPTOS == 7
+replace DPTO = 19 if DPTOS == 8
+replace DPTO = 23 if DPTOS == 12
+replace DPTO = 27 if DPTOS == 10
+replace DPTO = 52 if DPTOS == 17
+replace DPTO = 54 if DPTOS == 18
+
+
+drop if DPTO != 5 & DPTO != 13 & DPTO != 18 & DPTO != 19 & DPTO != 23 & DPTO != 27 & DPTO != 52 & DPTO != 4 & DPTOS != . 
+
+drop Mes Clase Departamentos test date
+keep if Class == 1
+rename per period
+rename Promediodeinglabo Avg_rural_income_nominal
+format %tm period
+sort period DPTO
+
+preserve 
+keep DPTO period Avg_rural_income_nominal 
+save "$data/income_data_pre.dta", replace
+restore
+
+save "$data/Laboral_data_processed_pre.dta", replace
+
+***
+
 import excel "$folder\TD departamental.xlsx", firstrow clear
 destring *, replace
 encode Mes, gen(date)
@@ -70,6 +128,8 @@ replace DPTOS =. if DPTOS < 54
 replace DPTOS = DPTOS[_n-1] if DPTOS ==.
 gen test = DPTOS +0
 gen DPTO = .
+
+
 /*Nariño = 52
 Putumayo = 86
 Norte de Santander = 54
@@ -99,13 +159,21 @@ keep if Class == 1
 rename per period
 format %tm period
 sort period DPTO
+
+* Put the income variable so it can match in the full dataset
+merge 1:1 period DPTO using "$data/Real_income_to_seasonal_adjust.dta"
+
 save "$data/Laboral_data_processed.dta", replace
+* merging the two laboral datasets
+
+use "$data/Laboral_data_processed_pre", replace
+append
 
 ************ 3. CPI data
 
 import excel "$folder\Inflation.xlsx", sheet("Inflation(year-city)") firstrow clear
 destring *, replace
-encode state, gen(DPTOS)
+encode State, gen(DPTOS)
 gen test = DPTOS +0
 gen DPTO =.
 replace DPTO = 5 if DPTOS == 1
@@ -128,22 +196,22 @@ insobs 2, after(8*`k' + 2*`k' -2)
 
 * fill up variables
 replace DPTO = DPTO[_n-1] +1 if DPTO == .
-replace DPTO = 27 if DPTO == 87
-replace DPTO = 95 if DPTO == 88
-replace inflationwrttolastmonth = inflationwrttolastmonth[_n-1] if DPTOS ==.
-replace monthnumber = monthnumber[_n-1] if DPTOS ==.
+replace DPTO = 27 if DPTO == 14
+replace DPTO = 95 if DPTO == 15
+replace Inflationbase2018100 = Inflationbase2018100[_n-1] if DPTOS ==.
+replace MonthNumber = MonthNumber[_n-1] if DPTOS ==.
 replace year = year[_n-1] if DPTOS ==.
 
 * define period
-gen period = ym(year, monthnumber)
+gen period = ym(year, MonthNumber)
 
 * keep important variabless
-keep period inflationwrttolastmonth DPTO
-rename inflationwrttolastmonth monthly_inflation
+keep period Inflationbase2018100 DPTO
+rename Inflationbase2018100 CPI
 * probably this time series need seasonal adjustment
 format %tm period
 
-save "$data/inflation_intermediate.dta", replace
+save "$data/inflation_intermediate_full.dta", replace
 
 **** 4. Coca plantation estimate
 import excel "$folder\Coca_Month.xlsx", sheet("AllTogether") firstrow clear
@@ -267,12 +335,30 @@ save "$data/seizure.dta", replace
 *** US data (works as national monthly data in the sense there is no state-variation)
 
 * 1. Avg Rural Household (nominal)
-use "$data/Real_income_to_seasonal_adjust.dta", clear
+use "$data/income_data_pre.dta", clear
+xtset DPTO period
+tsfill
+append using  "$data/nominal_income_post.dta"
+*use "$data/Real_income_to_seasonal_adjust.dta", clear
+
+collapse (mean) Avg_rural_income_nominal INGLABO, by(period DPTO)
+
+gen nominal_income = (Avg_rural_income_nominal + INGLABO)/2 
+
+
 keep INGLABO period DPTO
+
+* plot to see differences
+twoway (connected  Avg_rural_income_nominal period if period >720 & period <= 740, by(DPTO)) (connected  INGLABO period if period >720 & period <= 740, by(DPTO) legend(order(1 "Pre" 2 "Post" )size(small) rows(2) pos(6) region(c(none))))
+
 rename INGLABO Avg_rural_income_nominal
 
+append using 
+* Avg Rural pre 2010-2020
+
+
 * 2. Monthly inflation
-merge m:m period DPTO using "$data/inflation_intermediate.dta"
+merge m:m period DPTO using "$data/inflation_intermediate_full.dta"
 drop _merge
 
 * 3. Laboral market variables
