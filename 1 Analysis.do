@@ -9,7 +9,7 @@ global data "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Co
 
 global data_clean "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\data_clean"
 
-global tab_folder "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\Tables"
+global tabfolder "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\Tables"
 
 global folder "C:\Users\juanf\OneDrive\Documentos\GitHub\2023_FSS_Group_Project_Colombia\"
 
@@ -154,7 +154,7 @@ Guaviare = NA
 */
 
 
-forvalues k = 2020/2023 {
+forvalues k = 2021/2023 {
 	
 	forvalues i = 1/12 {
 		
@@ -165,16 +165,12 @@ forvalues k = 2020/2023 {
 keep if DPTO == 52 | DPTO == 54 | DPTO == 19 | DPTO == 5 | DPTO == 13 | DPTO == 23 | DPTO == 18 | DPTO == 27
 keep if CLASE == 2 // Rural households
 
-collapse (mean) INGLABO, by(DPTO PER MES)
-
+collapse (mean) INGLABO  [iw=FEX_C18], by(DPTO PER MES)
 
 save "$data\Proc_`k'_`i'.dta", replace
 	
-	
 	}
-	
-
-	
+		
 }
 
 * First we need to fix some data (the month identifier is not working for some 2022 months)
@@ -240,7 +236,7 @@ summ INGLABO if DPTO == 27 & PER == 2020 & (MES == 7 | MES == 9)
 scalar choco_miss = r(mean)
 
 replace INGLABO = choco_miss if period == 727
-
+save "$data/nominal_income_post.dta", replace
 *------- Merging the inflation data
 * For now I'll use the national CPI, the alternative is to compute 7/8 capital cities CPI
 preserve

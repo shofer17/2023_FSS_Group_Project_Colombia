@@ -1,0 +1,129 @@
+\documentclass[12 pt,fullpage]{article}
+%\documentclass[draft]{ectaart}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{graphicx}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{textcomp}
+\usepackage{ifsym}
+\usepackage{mathrsfs}
+\usepackage{epstopdf}
+\usepackage{MnSymbol}
+\usepackage{multirow}
+\usepackage{epsfig}
+\usepackage[normalem]{ulem}
+\usepackage[round]{natbib}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{url}
+\usepackage{placeins}
+\usepackage{longtable}
+\usepackage{pdflscape}
+\usepackage{tabularx}
+\usepackage{booktabs}
+%\usepackage{xcolor}
+\usepackage{bbm}
+\usepackage[colorlinks,citecolor=blue]{hyperref}
+\usepackage[margin=1.1in]{geometry}
+\usepackage{hyperref}
+\usepackage{comment}
+\usepackage{chngcntr}
+\usepackage{amsmath}
+\usepackage{setspace}
+%\usepackage{colortbl}
+\usepackage[table,xcdraw]{xcolor}
+
+%\usepackage[bottom]{footmisc}
+\usepackage[hang,flushmargin]{footmisc}
+\counterwithout{equation}{section} 
+%\counterwithin{equation}{chapter} 
+%\numberwithin{equation}{section}
+
+\newcommand{\footremember}[2]{%
+	\footnote{#2}
+	\newcounter{#1}
+	\setcounter{#1}{\value{footnote}}%
+}
+\newcommand{\footrecall}[1]{%
+	\footnotemark[\value{#1}]%
+}
+
+\setcounter{MaxMatrixCols}{10}
+
+\linespread{1.5}
+
+
+
+%\topmargin=-1.8cm \textheight=23.8cm \oddsidemargin=-0.3cm
+%\evensidemargin=-0.5cm \textwidth=17.1cm
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\theoremstyle{plain}
+\newtheorem{theo}{Theorem}
+\newtheorem{conj}{Conjecture}
+\newtheorem{prop}{Proposition}
+\newtheorem*{prop*}{Proposition}
+\newtheorem{coro}{Corollary}
+\newtheorem{lemma}{Lemma}
+\newtheorem*{lemma*}{Lemma}
+\newtheorem{assum}{Assumption}
+\newtheorem{defi}{Definition}
+
+\newtheorem{innercustomgeneric}{\customgenericname}
+\providecommand{\customgenericname}{}
+\newcommand{\newcustomtheorem}[2]{%
+	\newenvironment{#1}[1]
+	{%
+		\renewcommand\customgenericname{#2}%
+		\renewcommand\theinnercustomgeneric{##1}%
+		\innercustomgeneric
+	}
+	{\endinnercustomgeneric}
+}
+
+\newcustomtheorem{customprop}{Proposition}
+\newcustomtheorem{customlemma}{Lemma}
+
+\def\sym#1{\ifmmode^{#1}\else\(^{#1}\)\fi}
+
+
+\newcommand{\figtext}[1]{
+	\vspace{-1.9ex}
+	\captionsetup{justification=justified,font=footnotesize}
+	\caption*{\hspace{6pt}\hangindent=1.5em #1}
+}
+\newcommand{\fignote}[1]{\figtext{\emph{Note:~}~#1}}
+
+\newcommand{\figsource}[1]{\figtext{\emph{Source:~}~#1}}
+
+\newcommand{\starnote}{\figtext{* p $<$ 0.1, ** p $<$ 0.05, *** p $<$ 0.01. Standard errors in parentheses.}}
+
+\title{\textbf{Fentanyl Consumption and Peasants Income}}
+\author{\vspace{-30mm}}
+
+\begin{document}
+	\date{\vspace{-25mm}}
+	\maketitle
+	\vspace{-15mm}
+
+
+
+\newpage
+\subsection*{Preliminar regression}
+
+\begin{table}[h!]
+	\begin{center}
+		\scalebox{0.65}{
+			\input{./Table_Regression_comparison.tex}}
+		\caption{}
+	\end{center}
+\end{table}
+\vspace{-3mm}
+\footnotesize Note: This table reports the regression of income as a function of fentanyl and cocaine related deaths in the US. Column 1 shows the dependent variable as the traditional approach using survey data for average rural household income. Columns 2-5 use satellite light intensity data, in particular column 2 uses the average light intensity, column 3 establishes a classification of small villages. column 4 for medium-size villages and column 5 for big cities. All columns include state and monthly fixed effects and control by standard macroeconomic variables that affects the business cycle. Unit of observation is state x month. 
+
+
+\end{document}

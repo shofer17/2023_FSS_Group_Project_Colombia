@@ -611,7 +611,7 @@ label var cocaine_kg "Amount of Cocaine seized in kilograms"
 label var only_fentanyl_related "Number of deaths (US) caused only by fentanyl"
 label var cocain_related_deaths "Number of deaths (US) caused, among others, by fentanyl"
 label var only_cocaine_related "Number of deaths (US) caused only by cocaine"
-label var fentanyl_related_deaths"Number of deaths (US) caused, among others, by fentanyl"
+label var fentanyl_related_deaths "Number of deaths (US) caused, among others, by fentanyl"
 
 
 
