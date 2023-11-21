@@ -145,21 +145,55 @@ prefoot("\arrayrulecolor{black!10}\midrule") ///
 postfoot("\arrayrulecolor{black}\bottomrule" "\multicolumn{5}{c}{*** p$<$0.01, ** p$<$0.05, * p$<$0.1}" "\end{tabular}")
 
 
+
+
+************ COEF PLOT
+
+use "$data/Database_full.dta", clear
+
+
+foreach var in Employed Unemployed Inactives Avg_rural_income_nominal EAP PET period CPI Non_employed Year Month EstimateProductionHa avg_monthly_light_intensity avg_monthly_light_small avg_monthly_light_medium avg_monthly_light_big ISE primary_activities agriculture Exchange_rate ratio_fent ratio_cocaine fent_kg cocaine_kg only_fentanyl_related cocain_related_deaths only_cocaine_related fentanyl_related_deaths {
+	
+	gen log_`var' = log(`var')
+}
+
+gen real_income = Avg_rural_income_nominal/CPI
+gen log_real_income = log(real_income)
+gen avg_monthly_light_small_lagg = avg_monthly_light_small[_n-1]
+gen COVID = (Year == 2020 & Month >= 4 & Month <=6)
+
+
 label var Participation_rate "Part. Rate"
-label var log_Exchange_rate "Log Exchange rate"
+label var log_Exchange_rate "L Exchange rate"
 label var avg_monthly_light_small_lagg "(Lag) Average Monthly Night Light Intensity for Small Villages"
-label var log_fentanyl_related_deaths "Log # of deaths (US) caused, among others, by fentanyl"
-label var log_cocain_related "Log number of deaths (US) caused, among others, by fentanyl"
-label var log_Exchange_rate "Log Exch. rate"
-label var log_EstimateProductionHa "Log Est. Coca Prod. "
-label var ENSO "ENSO index"
-label var log_only_cocaine_related "Log deaths cocaine"
-label var log_only_fentanyl_related "Log deaths fent."
+label var log_fentanyl_related_deaths "L # of deaths (US) caused, among others, by fentanyl"
+label var log_cocain_related "L number of deaths (US) caused, among others, by fentanyl"
+label var log_Exchange_rate "L Exch. rate"
+label var log_EstimateProductionHa "L Est. Coca Prod. "
+label var ENSO "ENSO"
+label var log_only_cocaine_related "L deaths coca."
+label var log_only_fentanyl_related "L deaths fent."
 label var ISE "Econ. Perf. Ind."
 
-coefplot coefs, omitted	///
+gen scale_ISE = ISE/10
+gen scale_CPI = CPI/10
+label var scale_ISE "Scaled Econ. Perf. Ind."
+label var scale_CPI "Scaled CPI"
+reghdfe avg_monthly_light_small log_only_fentanyl_related log_only_cocaine_related scale_CPI Participation_rate log_Exchange_rate  log_EstimateProductionHa ENSO scale_ISE COVID , abs(DPTO Month) nocons vce(cluster DPTO) 
+	estimates store coefs_pre
+	estimates store est_`var'_pre
+
+keep if period >=657	
+	
+reghdfe avg_monthly_light_small log_only_fentanyl_related log_only_cocaine_related scale_CPI Participation_rate log_Exchange_rate  log_EstimateProductionHa ENSO scale_ISE COVID , abs(DPTO Month) nocons vce(cluster DPTO) 
+	estimates store coefs_post
+	estimates store est_`var'_post
+	
+	
+	
+coefplot coefs_pre coefs_post, omitted	///
 		  vertical ///
-		  label  ///
+		  label plotlabels(Full Post, w(4)) ///
 		  yline(0, lpattern(dash) lwidth(*0.5)) ///
 		  ytitle("") ///
 		  xtitle("Income: Average Light Intensity for Small Villages", size(small) height(6)) ///
@@ -172,10 +206,10 @@ coefplot coefs, omitted	///
 		  xscale(lc(black))  ///
 		  ciopts(lcol(black) recast(rcap) lwidth(*0.8)) ///
 		   yscale(range(-0.05 0.05) lc(black))  ///
-		   ylabel(-0.4(0.2)0.4) ///
+		   ylabel(-0.3(0.1)0.3) ///
 		  graphregion(fcolor(white)) bgcolor(white)  ///
 		  name(coef, replace) ///
-		  keep (*:  log_only_fentanyl_related log_only_cocaine_related CPI Participation_rate log_Exchange_rate  log_EstimateProductionHa ENSO ISE COVID) 
+		  keep (*:  log_only_fentanyl_related log_only_cocaine_related scale_CPI Participation_rate log_Exchange_rate  log_EstimateProductionHa ENSO scale_ISE COVID) 
 
 /*
 *keep if Year >= 2019
