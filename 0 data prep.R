@@ -17,43 +17,20 @@ limit  <- 100000 # dataset has 60k rows, 100k should get all data
 data_VSRR <- read.csv("https://data.cdc.gov/resource/xkb8-kh2a.csv?$limit=100000")
 
 # https://injuryfacts.nsc.org/home-and-community/safety-topics/drugoverdoses/data-details/
-data_injuryfacts <- readxl::read_xlsx(paste0(path_raw, 
+data_injuryfacts <- readxl::read_xlsx(paste0(path_raw,"drug_seizures/", 
                                         "Drug Poisoning deaths and rates .xlsx"),
                                  skip = 1)
 
-controls <- readRDS(paste0(path_raw, "Export_share.Rds"))
-controls <- readRDS(paste0(path_raw, "Controls cleaned CEPII grid.Rdata"))
-
 ## 1.2 Drug data --------------------------------------------------------------
 
-drugs_nw_20_23 <- read.csv(paste0(path_raw, "nationwide-drugs-fy20-fy23.csv"))
-drugs_nw_19_22 <- read.csv(paste0(path_raw, "nationwide-drugs-fy19-fy22.csv"))
+drugs_nw_20_23 <- read.csv(paste0(path_raw_seizures, "nationwide-drugs-fy20-fy23.csv"))
+drugs_nw_19_22 <- read.csv(paste0(path_raw_seizures, "nationwide-drugs-fy19-fy22.csv"))
 
-drugs_amo_20_23 <- read.csv(paste0(path_raw, "amo-drug-seizures-fy20-fy23.csv"))
-drugs_amo_19_22 <- read.csv(paste0(path_raw, "amo-drug-seizures-fy19-fy22.csv"))
+drugs_amo_20_23 <- read.csv(paste0(path_raw_seizures, "amo-drug-seizures-fy20-fy23.csv"))
+drugs_amo_19_22 <- read.csv(paste0(path_raw_seizures, "amo-drug-seizures-fy19-fy22.csv"))
 
 # 2. prep data -----------------------------------------------------------------
-# 2.1 deaths -----------------------------------------------------------------
-files <- list.files(paste0(path_raw, "us_mortality"))[-1]
-
-data_out <- data.frame()
-#enicon <- paste0("enicon_", 1:20)
-
-for(i in 1:length(files)){
-  us_mort <- read.csv(paste0(path_raw,"us_mortality/", files[i]))
-  
-  us_mort <- us_mort %>% 
-    select(monthdth,enicon_1)%>%
-    filter(enicon_1 %in% c("T404", "T405"))%>%
-    mutate(indicator = 1)%>%
-    mutate(year = i)
-  
-  us_mort <- aggregate(data = us_mort, indicator ~ enicon_1 + monthdth + year, FUN = sum)
-  data_out <- rbind(data_out, us_mort)
-}
-
-
-
+# 2.1 VSRR and Injuryfact data -------------------------------------------------
 
 data_VSRR_prov <- data_VSRR %>%
   mutate(year_month = paste0(year, "_", month))%>%
